@@ -3,6 +3,26 @@
 All notable changes to Omarchy Quattro are documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/); versioning is MAJOR.MINOR.
 
+## [2.1.0] — 2026-09-27
+
+### Added — Raspberry Pi 5 16GB RAM Architecture, Upstream v4.0.4 Parity & Mini Touchscreen Support
+
+- **Raspberry Pi 5 16GB RAM Adaptive Architecture**:
+  - **Dynamic Sysctl Dirty Writeback Scaling**: Upgraded `apply_tuning.sh` and `omarchy-pi5-post-update.sh` to detect installed RAM dynamically. Automatically tunes `vm.dirty_background_bytes` to 400MB on 16GB SKUs (200MB on 8GB, 100MB on <=4GB) to eliminate premature page flush stalls under high-throughput compilation and model loading.
+  - **Expanded GPU CMA Pool**: Injected `dtoverlay=vc4-kms-v3d,cma-512` in `config.txt` allocating 512MB to the Contiguous Memory Allocator pool. Guarantees abundant frame buffer headroom for Wayland compositing across multi-monitor, HiDPI, and mini touch panels.
+  - **16GB ZRAM Headroom**: Verified 8GB in-memory zstd swap (`min(ram/2, 8192)`) providing 24GB+ effective compressed memory headroom on 16GB boards.
+
+- **Mini Touch HDMI Screen & Wayland Touch Integration**:
+  - **Plug-and-Play HDMI Display**: Added `hdmi_force_hotplug=1` and `dtparam=audio=on` in `config.txt` for instantaneous display sync and HDMI speaker audio on mini 7-inch / 8-inch IPS LCD panels.
+  - **On-Screen Virtual Keyboard (`squeekboard`)**: Packaged `squeekboard` native Wayland virtual keyboard, bundled `omarchy-toggle-osk` helper script, and deployed `omarchy-osk.desktop` launcher for headless or tablet-style touch workflows.
+  - **Touch Gestures & Shortcuts**: Configured 3-finger workspace swipe touch gestures in Hyprland (`workspace_swipe_touch = true`) and touch tap enablement in Sway, alongside `Super + Alt + K` shortcut to toggle the virtual keyboard instantly.
+
+- **Upstream Omarchy v4.0.4 Parity & Package Synchronization**:
+  - **Upstream Baseline Sync**: Synchronized `/opt/omarchy` to upstream commit `c5b4db77d68e7fbce5cf11120712ea322557e967` on the `quattro` branch (tracking official `v4.0.4`).
+  - **Automated Upstream Sync Fix**: Fixed regex in `scripts/auto_upstream_sync.sh` to match parameter expansion formats (`-` and `:-`), resolving a bug where upstream commit updates were not automatically applied to `desktop/clone_omarchy_repo.sh`.
+  - **Native Package Layer**: Switched `obsidian` and `pinta` to native aarch64 pacman packages from `pkgs.omarchy.org/edge`, deprecating Flatpak overhead while preserving Flatpak as an automated fallback.
+  - **New Upstream Tooling**: Integrated `elsewhen`, `learn-omarchy`, `flea`, `owe`, `yay`, and `zed` into the core repository package sets.
+
 ## [2.0.0] — 2026-09-11
 
 ### Added — Omarchy Quattro v2.0 Definitive Release Image & AI Agentware Suite

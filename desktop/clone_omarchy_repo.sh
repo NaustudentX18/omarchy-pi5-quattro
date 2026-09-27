@@ -19,7 +19,7 @@ OMARCHY_REPO_URL="${OMARCHY_REPO_URL:-https://github.com/omacom/omarchy.git}"
 OMARCHY_BRANCH="${OMARCHY_BRANCH:-quattro}"
 # Optional: pin to a specific commit for reproducible builds.
 # Leave empty to dynamically track the latest commit on OMARCHY_BRANCH.
-OMARCHY_PIN_SHA="${OMARCHY_PIN_SHA-8ea51516390320f8e768808b230098e67bdaa82c}"
+OMARCHY_PIN_SHA="${OMARCHY_PIN_SHA-c5b4db77d68e7fbce5cf11120712ea322557e967}"
 OMARCHY_INSTALL_DIR="${TARGET_ROOT}/opt/omarchy"
 USERNAME="omarchy"
 USER_HOME="${TARGET_ROOT}/home/${USERNAME}"
@@ -417,6 +417,34 @@ if [[ -x "${SCRIPT_DIR}/../fov/install_fov.sh" ]]; then
     echo "[+] Installing omarchy-fov XR overlay..."
     bash "${SCRIPT_DIR}/../fov/install_fov.sh" "${TARGET_ROOT}" || true
 fi
+
+# ------------------------------------------------------------------------------
+# 7c. Install Touch Screen & Virtual Keyboard Helpers
+# ------------------------------------------------------------------------------
+echo "[+] Configuring touch screen and on-screen keyboard support..."
+cat << 'OSK_SCRIPT_EOF' > "${TARGET_ROOT}/usr/local/bin/omarchy-toggle-osk"
+#!/usr/bin/env bash
+if pgrep -x squeekboard >/dev/null; then
+    pkill -x squeekboard
+else
+    squeekboard &
+fi
+OSK_SCRIPT_EOF
+chmod 0755 "${TARGET_ROOT}/usr/local/bin/omarchy-toggle-osk"
+
+mkdir -p "${TARGET_ROOT}/usr/share/applications" "${USER_HOME}/.local/share/applications" "${SKEL_DIR}/.local/share/applications"
+cat << 'OSK_DESKTOP_EOF' | tee "${TARGET_ROOT}/usr/share/applications/omarchy-osk.desktop" "${USER_HOME}/.local/share/applications/omarchy-osk.desktop" "${SKEL_DIR}/.local/share/applications/omarchy-osk.desktop" >/dev/null
+[Desktop Entry]
+Version=1.0
+Name=On-Screen Keyboard
+Comment=Toggle Squeekboard Virtual Touch Keyboard
+Exec=/usr/local/bin/omarchy-toggle-osk
+Icon=input-keyboard-virtual
+Terminal=false
+Type=Application
+Categories=Utility;Accessibility;
+OSK_DESKTOP_EOF
+chmod 0755 "${TARGET_ROOT}/usr/share/applications/omarchy-osk.desktop" "${USER_HOME}/.local/share/applications/omarchy-osk.desktop" "${SKEL_DIR}/.local/share/applications/omarchy-osk.desktop"
 
 echo "[+] Finalizing home directory permissions on ${USER_HOME}..."
 if id -u "${USERNAME}" >/dev/null 2>&1 && [[ -d "${USER_HOME}" ]]; then

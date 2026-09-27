@@ -119,4 +119,17 @@ else
     echo "    [INFO] fov/ overlay not found on disk; skip FOV reassert"
 fi
 
+# 11. Re-assert adaptive RAM sysctl parameters (16GB vs 8GB vs 4GB)
+if [ -f /etc/sysctl.d/99-pi5-sysctl.conf ]; then
+    TOTAL_RAM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo "0")
+    if [ "${TOTAL_RAM_MB}" -gt 12000 ]; then
+        echo "    Detected 16GB Pi 5 SKU (${TOTAL_RAM_MB} MB) — ensuring vm.dirty_background_bytes=400MB..."
+        sed -i -E 's/^vm\.dirty_background_bytes=.*/vm.dirty_background_bytes=419430400/' /etc/sysctl.d/99-pi5-sysctl.conf
+    elif [ "${TOTAL_RAM_MB}" -gt 6000 ]; then
+        echo "    Detected 8GB Pi 5 SKU (${TOTAL_RAM_MB} MB) — ensuring vm.dirty_background_bytes=200MB..."
+        sed -i -E 's/^vm\.dirty_background_bytes=.*/vm.dirty_background_bytes=209715200/' /etc/sysctl.d/99-pi5-sysctl.conf
+    fi
+    sysctl -p /etc/sysctl.d/99-pi5-sysctl.conf >/dev/null 2>&1 || true
+fi
+
 echo "[*] [Omarchy Quattro] Pi 5 post-update reconciliation complete."

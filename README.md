@@ -76,14 +76,15 @@ Official [Omarchy](https://github.com/omacom/omarchy) targets x86_64 desktop wor
 | **Window Manager** | Wayfire / PIXEL (Traditional) | GNOME / KDE (Heavyweight) | **Hyprland 0.56.2 (Wayland)** + Aquamarine + Quickshell |
 | **Design Language** | Legacy Flat UI | Mixed / Stock Themes | **Unified Tokyo Night** (Shell, Terminal, Editors, Web, btop) |
 | **Kernel Page Size** | 4KB Legacy Pages | 4KB Standard Pages | **16KB Pages (`linux-rpi-16k`)** — 15–20% higher memory bandwidth |
+| **RAM Scaling** | Static defaults | Stock memory settings | **Dynamic Tuning (4GB / 8GB / 16GB SKUs)** — 400MB writeback buffer & 8GB ZRAM on 16GB |
 | **Storage Speed** | SD Card / PCIe Gen 2 (~400 MB/s) | Stock PCIe Gen 2 | **PCIe Gen 3 NVMe (~850–900 MB/s)** out-of-the-box |
 | **App Launcher** | Traditional Start Menu | Fullscreen App Grid | **Walker + Elephant** fuzzy modal launcher (`Super + D`) |
 | **Autonomous AI Suite**| None / Manual Configuration | None / Manual Compiles | **OpenClaw, Cursor CLI, Hermes Desktop & CLI, Muse Code, Claude Code, Codex, Copilot** pre-wired |
 | **Web & Chat AI** | Browser Tabs Only | Browser Tabs Only | **Dedicated ChatGPT Desktop, Perplexity AI Desktop, VS Code, Typora** |
-| **Application Layer** | Standard Debian Repos | Distro Defaults | **Rolling ALARM + official `[omarchy]` edge repo + Flatpak (Obsidian, Pinta)** |
+| **Application Layer** | Standard Debian Repos | Distro Defaults | **Rolling ALARM + official `[omarchy]` edge repo (Native Obsidian, Pinta, Zed)** |
 | **Cooling & Thermal** | Basic Kernel Default | Manual Python Scripts | **Argon ONE / NEO 5 I²C fan daemon (`argononed`)** with calibrated 4-stage curve |
 | **Headless Bag Boot** | Display server fails / hangs | Black screen lockup | **Automatic Headless Display Watchdog** with dynamic virtual monitor creation |
-| **Wearable XR Ready** | Manual XRandR / Custom modes | Manual display configs | **Plug-and-play for Viture Pro Dock & Luma Ultra XR glasses (1080p @ 120Hz)** |
+| **Touch & Displays** | Manual display configs | Manual touch calibration | **Plug-and-play Mini Touch HDMI (7"/8" IPS LCD with Squeekboard OSK) & Viture XR** |
 | **First-Boot Flow** | Manual Setup Wizard | Manual Installer / Cloud-Init | **100% Zero-Touch**: Auto-partition expansion, ZRAM swap, Avahi mDNS, Hyprland autologin |
 
 ---
@@ -292,9 +293,14 @@ Omarchy Quattro v2.0 extracts the absolute maximum performance from the Raspberr
 arm_64bit=1
 arm_boost=1
 
-# Display & GPU (Broadcom VideoCore VII KMS DRM)
-dtoverlay=vc4-kms-v3d
+# Display & GPU (Broadcom VideoCore VII KMS DRM + 512MB CMA Pool)
+dtoverlay=vc4-kms-v3d,cma-512
 max_framebuffers=2
+disable_overscan=1
+hdmi_force_hotplug=1
+
+# Audio (HDMI Audio out to display speakers & PWM)
+dtparam=audio=on
 
 # High-Throughput PCIe Gen 3 NVMe Enablement
 dtparam=pciex1

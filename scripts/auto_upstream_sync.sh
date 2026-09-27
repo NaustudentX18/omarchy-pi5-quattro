@@ -35,7 +35,7 @@ if [[ -z "${UPSTREAM_SHA}" ]]; then
     exit 1
 fi
 
-CURRENT_PIN=$(grep -oE 'OMARCHY_PIN_SHA:-\"?[a-f0-9]+\"?' desktop/clone_omarchy_repo.sh | head -n 1 | sed -E 's/.*:-"?([a-f0-9]+)"?.*/\1/' || true)
+CURRENT_PIN=$(grep -oE 'OMARCHY_PIN_SHA:?-?\"?[a-f0-9]{40}\"?' desktop/clone_omarchy_repo.sh | head -n 1 | grep -oE '[a-f0-9]{40}' || true)
 
 log "Upstream Latest Tag: ${LATEST_TAG}"
 log "Upstream Quattro SHA: ${UPSTREAM_SHA}"
@@ -53,7 +53,7 @@ log "[*] Upstream update detected (${CURRENT_PIN} -> ${UPSTREAM_SHA}). Planning 
 git pull --ff-only origin master || true
 
 # 4. Update clone_omarchy_repo.sh pin
-sed -i -E "s/(OMARCHY_PIN_SHA:-\"?)[a-f0-9]+(\"?)/\1${UPSTREAM_SHA}\2/" desktop/clone_omarchy_repo.sh
+sed -i -E "s/(OMARCHY_PIN_SHA:?-?\"?)[a-f0-9]{40}(\"?)/\1${UPSTREAM_SHA}\2/" desktop/clone_omarchy_repo.sh
 
 # 5. Audit base packages from upstream quattro branch
 UPSTREAM_BASE_URL="https://raw.githubusercontent.com/omacom/omarchy/quattro/install/omarchy-base.packages"

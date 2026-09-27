@@ -116,5 +116,11 @@ fuzzel
 mako
 swaybg
 upower
-# ZRAM swap: 4GB zstd-compressed swap configured via /etc/systemd/zram-generator.conf
+# ZRAM swap: 4GB/8GB zstd-compressed swap configured via /etc/systemd/zram-generator.conf
 zram-generator
+
+# ------------------------------------------------------------------------------
+# Touch Screen & On-Screen Keyboard Support
+# ------------------------------------------------------------------------------
+squeekboard
+libinput

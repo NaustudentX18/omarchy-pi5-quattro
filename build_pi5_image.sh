@@ -273,9 +273,14 @@ arm_64bit=1
 arm_boost=1
 
 # Display & Graphics (KMS DRM Driver for Wayland/Hyprland)
-dtoverlay=vc4-kms-v3d
+# Allocates 512MB CMA memory pool for 4K/dual-monitor/touchscreen buffer acceleration
+dtoverlay=vc4-kms-v3d,cma-512
 max_framebuffers=2
 disable_overscan=1
+hdmi_force_hotplug=1
+
+# Audio Enablement (HDMI Audio & PWM)
+dtparam=audio=on
 
 # Hardware Buses (I2C enabled for Argon ONE / NEO 5 case fans)
 dtparam=i2c_arm=on
@@ -517,7 +522,7 @@ fi
 # repo extras are pinned here (omarchy-repo aarch64 pkgs that base.list
 # references). Per-package fallback so one bad name can never kill the build.
 echo "[+] Installing upstream Omarchy parity set..."
-OMARCHY_REPO_PKGS="omarchy-keyring omarchy-zsh omarchy-nvim omacalc omacut omawrite ttfx tobi-try tensaku herdr aether asdcontrol cliamp mise-bin walker elephant-all quickshell-git xdg-terminal-exec yaru-icon-theme yaru-gtk-theme ttf-ia-writer ttf-jetbrains-mono-nerd-basic tzupdate ufw-docker localsend hyprland-preview-share-picker claude-code crush-bin openai-codex-bin github-copilot-cli cursor-cli voxtype-bin omarchy-walker omarchy-settings omarchy-audio-tuner omasnap omatrack omazed strata schist-bin once-bin dbxcli-bin bun-bin openclaw nautilus-open-any-terminal wayfreeze sunshine retroarch retroarch-joypad-autoconfig-git libretro-cap32-git libretro-database-git libretro-fbneo-git libretro-vice-x128-git libretro-vice-x64-git libretro-vice-x64dtv-git libretro-vice-x64sc-git libretro-vice-xcbm2-git libretro-vice-xcbm5x0-git libretro-vice-xpet-git libretro-vice-xplus4-git libretro-vice-xscpu64-git libretro-vice-xvic-git openai-codex-desktop perplexity visual-studio-code-bin typora usage imv flatpak"
+OMARCHY_REPO_PKGS="omarchy-keyring omarchy-zsh omarchy-nvim omacalc omacut omawrite ttfx tobi-try tensaku herdr aether asdcontrol cliamp mise-bin walker elephant-all quickshell-git xdg-terminal-exec yaru-icon-theme yaru-gtk-theme ttf-ia-writer ttf-jetbrains-mono-nerd-basic tzupdate ufw-docker localsend hyprland-preview-share-picker claude-code crush-bin openai-codex-bin github-copilot-cli cursor-cli voxtype-bin omarchy-walker omarchy-settings omarchy-audio-tuner omasnap omatrack omazed strata schist-bin once-bin dbxcli-bin bun-bin openclaw nautilus-open-any-terminal wayfreeze sunshine retroarch retroarch-joypad-autoconfig-git libretro-cap32-git libretro-database-git libretro-fbneo-git libretro-vice-x128-git libretro-vice-x64-git libretro-vice-x64dtv-git libretro-vice-x64sc-git libretro-vice-xcbm2-git libretro-vice-xcbm5x0-git libretro-vice-xpet-git libretro-vice-xplus4-git libretro-vice-xscpu64-git libretro-vice-xvic-git openai-codex-desktop perplexity visual-studio-code-bin typora usage imv flatpak elsewhen learn-omarchy flea owe yay zed obsidian pinta squeekboard"
 BASE_PKGS=""
 if [ -f /opt/omarchy/install/omarchy-base.packages ]; then
     BASE_PKGS=$(grep -vE '^\s*(#|$)' /opt/omarchy/install/omarchy-base.packages)
@@ -749,7 +754,16 @@ bindsym $mod+Tab workspace next
 bindsym $mod+Shift+Tab workspace prev
 
 # ------------------------------------------------------------------------------
-# 12. Daemons & Background Services
+# 12. Touchscreen & On-Screen Virtual Keyboard
+# ------------------------------------------------------------------------------
+input type:touch {
+    events enabled
+    tap enabled
+}
+bindsym $mod+Mod1+k exec /usr/local/bin/omarchy-toggle-osk
+
+# ------------------------------------------------------------------------------
+# 13. Daemons & Background Services
 # ------------------------------------------------------------------------------
 exec waybar
 exec mako
@@ -788,6 +802,48 @@ SWAYCFG_EOF
     # 4. Add Super+D binding for direct Walker app launcher in Hyprland
     sed -i '/# Add extra bindings/a bindd = SUPER, D, Application launcher, exec, walker -p "Launch…"' /home/omarchy/.config/hypr/bindings.conf /etc/skel/.config/hypr/bindings.conf 2>/dev/null || true
     sed -i '/-- Add a new binding/a o.bind("SUPER + D", "Application launcher", "walker -p \\\"Launch…\\\"")' /home/omarchy/.config/hypr/bindings.lua /etc/skel/.config/hypr/bindings.lua 2>/dev/null || true
+
+    # 4b. Add Super+Alt+K for On-Screen Virtual Keyboard and enable touch gestures in Hyprland
+    sed -i '/# Add extra bindings/a bindd = SUPER MOD1, K, Toggle virtual keyboard, exec, /usr/local/bin/omarchy-toggle-osk' /home/omarchy/.config/hypr/bindings.conf /etc/skel/.config/hypr/bindings.conf 2>/dev/null || true
+    sed -i '/-- Add a new binding/a o.bind("SUPER + ALT + K", "Toggle virtual keyboard", "/usr/local/bin/omarchy-toggle-osk")' /home/omarchy/.config/hypr/bindings.lua /etc/skel/.config/hypr/bindings.lua 2>/dev/null || true
+    for hcfg in /home/omarchy/.config/hypr/hyprland.conf /etc/skel/.config/hypr/hyprland.conf; do
+        if [ -f "$hcfg" ] && ! grep -q 'workspace_swipe_touch' "$hcfg"; then
+            cat << 'HYPR_TOUCH_EOF' >> "$hcfg"
+
+# Touchscreen gesture navigation
+gestures {
+    workspace_swipe = true
+    workspace_swipe_fingers = 3
+    workspace_swipe_touch = true
+}
+HYPR_TOUCH_EOF
+        fi
+    done
+
+    # 4c. Deploy On-Screen Keyboard toggle helper and desktop launcher
+    cat << 'OSK_SCRIPT_EOF' > /usr/local/bin/omarchy-toggle-osk
+#!/usr/bin/env bash
+if pgrep -x squeekboard >/dev/null; then
+    pkill -x squeekboard
+else
+    squeekboard &
+fi
+OSK_SCRIPT_EOF
+    chmod +x /usr/local/bin/omarchy-toggle-osk
+
+    mkdir -p /usr/share/applications /home/omarchy/.local/share/applications /etc/skel/.local/share/applications
+    cat << 'OSK_DESKTOP_EOF' | tee /usr/share/applications/omarchy-osk.desktop /home/omarchy/.local/share/applications/omarchy-osk.desktop /etc/skel/.local/share/applications/omarchy-osk.desktop >/dev/null
+[Desktop Entry]
+Version=1.0
+Name=On-Screen Keyboard
+Comment=Toggle Squeekboard Virtual Touch Keyboard
+Exec=/usr/local/bin/omarchy-toggle-osk
+Icon=input-keyboard-virtual
+Terminal=false
+Type=Application
+Categories=Utility;Accessibility;
+OSK_DESKTOP_EOF
+    chmod +x /usr/share/applications/omarchy-osk.desktop /home/omarchy/.local/share/applications/omarchy-osk.desktop /etc/skel/.local/share/applications/omarchy-osk.desktop
 
     # 5. Disable bt-agent.service to prevent crash loop if bluez-tools is absent
     systemctl --user --global disable bt-agent.service 2>/dev/null || true
@@ -835,10 +891,15 @@ WATCH_PATCH
             || echo "[!] wallpaper unavailable (non-fatal)"
     fi
 
-    # 5c. Flatpak layer for upstream parity (Obsidian, Pinta)
-    echo "[+] Configuring Flatpak and installing Obsidian & Pinta..."
-    flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
-    flatpak install -y flathub md.obsidian.Obsidian com.github.PintaProject.Pinta || true
+    # 5c. Native package layer (with Flatpak fallback) for Obsidian & Pinta
+    echo "[+] Verifying Obsidian & Pinta installation..."
+    if pacman -Q obsidian &>/dev/null && pacman -Q pinta &>/dev/null; then
+        echo "[+] Obsidian and Pinta installed natively via pacman."
+    else
+        echo "[+] Configuring Flatpak fallback for Obsidian & Pinta..."
+        flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo || true
+        flatpak install -y flathub md.obsidian.Obsidian com.github.PintaProject.Pinta || true
+    fi
 
     # 5d. Spotify WebApp launcher for full desktop parity
     echo "[+] Installing Spotify webapp launcher..."

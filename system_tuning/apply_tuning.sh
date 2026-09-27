@@ -29,17 +29,22 @@ install -m 0644 "${SCRIPT_DIR}/99-pi5-sysctl.conf" "/etc/sysctl.d/99-pi5-sysctl.
 # Step 3: Apply sysctl configuration immediately
 echo "[3/3] Applying sysctl parameters..."
 
-# Detect installed RAM and sanity-check the dirty_background_bytes tuning.
-# 200 MB is appropriate for 4-8 GB Pi 5 SKUs; on smaller or much larger
-# boards the value may need to be raised/lowered.
+# Detect installed RAM and dynamically scale vm.dirty_background_bytes.
+# 16 GB Pi 5: 400 MB dirty writeback buffer avoids premature flush stalls.
+# 8 GB Pi 5:  200 MB dirty writeback buffer.
+# 4 GB Pi 5:  100 MB dirty writeback buffer prevents write queue runaway.
 TOTAL_RAM_MB=$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo 2>/dev/null || echo "0")
-if [ "${TOTAL_RAM_MB}" -gt 0 ]; then
-    echo "      Detected ${TOTAL_RAM_MB} MB RAM — vm.dirty_background_bytes=200M tuned for 4-8 GB."
-    if [ "${TOTAL_RAM_MB}" -lt 4000 ] || [ "${TOTAL_RAM_MB}" -gt 16384 ]; then
-        echo "      [WARN] RAM outside 4-16 GB range; vm.dirty_background_bytes may need tuning."
-    fi
+if [ "${TOTAL_RAM_MB}" -gt 12000 ]; then
+    echo "      Detected ${TOTAL_RAM_MB} MB RAM (16GB SKU) — scaling vm.dirty_background_bytes to 400MB."
+    sed -i -E 's/^vm\.dirty_background_bytes=.*/vm.dirty_background_bytes=419430400/' /etc/sysctl.d/99-pi5-sysctl.conf
+elif [ "${TOTAL_RAM_MB}" -gt 6000 ]; then
+    echo "      Detected ${TOTAL_RAM_MB} MB RAM (8GB SKU) — setting vm.dirty_background_bytes to 200MB."
+    sed -i -E 's/^vm\.dirty_background_bytes=.*/vm.dirty_background_bytes=209715200/' /etc/sysctl.d/99-pi5-sysctl.conf
+elif [ "${TOTAL_RAM_MB}" -gt 0 ]; then
+    echo "      Detected ${TOTAL_RAM_MB} MB RAM (<=4GB SKU) — setting vm.dirty_background_bytes to 100MB."
+    sed -i -E 's/^vm\.dirty_background_bytes=.*/vm.dirty_background_bytes=104857600/' /etc/sysctl.d/99-pi5-sysctl.conf
 else
-    echo "      [WARN] Could not read /proc/meminfo; RAM size unknown — leaving tuning unchanged."
+    echo "      [WARN] Could not read /proc/meminfo; RAM size unknown — leaving default 200MB."
 fi
 
 sysctl -p /etc/sysctl.d/99-pi5-sysctl.conf
